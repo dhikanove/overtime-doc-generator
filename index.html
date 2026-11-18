@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Generator Surat Perintah Lembur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // Konfigurasi tema shadcn/ui untuk Tailwind CDN
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+        colors: {
+          border: 'hsl(var(--border))', input: 'hsl(var(--input))', ring: 'hsl(var(--ring))',
+          background: 'hsl(var(--background))', foreground: 'hsl(var(--foreground))',
+          primary: { DEFAULT: 'hsl(var(--primary))', foreground: 'hsl(var(--primary-foreground))' },
+          secondary: { DEFAULT: 'hsl(var(--secondary))', foreground: 'hsl(var(--secondary-foreground))' },
+          muted: { DEFAULT: 'hsl(var(--muted))', foreground: 'hsl(var(--muted-foreground))' },
+          accent: { DEFAULT: 'hsl(var(--accent))', foreground: 'hsl(var(--accent-foreground))' },
+          destructive: { DEFAULT: 'hsl(var(--destructive))', foreground: 'hsl(var(--destructive-foreground))' },
+          card: { DEFAULT: 'hsl(var(--card))', foreground: 'hsl(var(--card-foreground))' },
+        },
+        borderRadius: { lg: 'var(--radius)', md: 'calc(var(--radius) - 2px)', sm: 'calc(var(--radius) - 4px)' },
+      },
+    },
+  };
+</script>
+<style type="text/tailwindcss">
+  @layer base {
+    :root {
+      --background: 0 0% 100%; --foreground: 240 10% 3.9%;
+      --card: 0 0% 100%; --card-foreground: 240 10% 3.9%;
+      --primary: 240 5.9% 10%; --primary-foreground: 0 0% 98%;
+      --secondary: 240 4.8% 95.9%; --secondary-foreground: 240 5.9% 10%;
+      --muted: 240 4.8% 95.9%; --muted-foreground: 240 3.8% 46.1%;
+      --accent: 240 4.8% 95.9%; --accent-foreground: 240 5.9% 10%;
+      --destructive: 0 84.2% 60.2%; --destructive-foreground: 0 0% 98%;
+      --border: 240 5.9% 90%; --input: 240 5.9% 90%; --ring: 240 5.9% 10%;
+      --radius: 0.5rem;
+    }
+    body { @apply bg-muted/40 text-foreground font-sans antialiased; }
+  }
+  @layer components {
+    .btn { @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium h-9 px-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50; }
+    .btn-sm { @apply h-8 px-3 text-xs; }
+    .btn-icon { @apply h-8 w-8 px-0; }
+    .btn-primary { @apply bg-primary text-primary-foreground hover:bg-primary/90 shadow; }
+    .btn-outline { @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm; }
+    .btn-secondary { @apply bg-secondary text-secondary-foreground hover:bg-secondary/80; }
+    .btn-ghost { @apply hover:bg-accent hover:text-accent-foreground; }
+    .btn-destructive { @apply bg-destructive text-destructive-foreground hover:bg-destructive/90; }
+    .input { @apply flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring; }
+    .textarea { @apply flex min-h-[64px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring; }
+    .label { @apply text-sm font-medium leading-none mb-1.5 block; }
+    .hint { @apply text-xs text-muted-foreground mt-1; }
+    .card { @apply rounded-xl border bg-card text-card-foreground shadow-sm; }
+    .badge { @apply inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold; }
+    .badge-secondary { @apply border-transparent bg-secondary text-secondary-foreground; }
+    .badge-outline { @apply text-foreground; }
+    .tabs-list { @apply inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground w-full; }
+    .tab-trigger { @apply inline-flex flex-1 items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium transition-all; }
+    .tab-trigger[data-active="true"] { @apply bg-background text-foreground shadow; }
+    .switch { @apply relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent bg-input transition-colors; }
+    .switch[data-on="true"] { @apply bg-primary; }
+    .switch-thumb { @apply pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg transition-transform translate-x-0; }
+    .switch[data-on="true"] .switch-thumb { @apply translate-x-4; }
+    .alert { @apply relative w-full rounded-lg border px-4 py-3 text-sm; }
+    .alert-warn { @apply border-amber-300 bg-amber-50 text-amber-900; }
+    .alert-info { @apply border-sky-200 bg-sky-50 text-sky-900; }
+  }
+</style>
+<style>
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog { border: none; padding: 0; background: transparent; max-width: 640px; width: calc(100% - 2rem); }
+  #sigCanvas { touch-action: none; cursor: crosshair; }
+
+  /* ====== Lembar cetak (meniru template SPL) ====== */
+  .page {
+    width: 210mm; min-height: 297mm; padding: 14mm 13mm; margin: 0 auto 24px; background: #fff; color: #000;
+    font-family: Verdana, Geneva, Tahoma, Arial, sans-serif; font-size: 9.5pt; box-shadow: 0 1px 4px rgba(0,0,0,.15);
+    box-sizing: border-box;
+  }
+  .page .frame { border: 1.6px solid #000; }
+  .page .logo { text-align: center; padding: 14px 10px 6px; min-height: 60px; }
+  .page .logo img { max-height: 70px; max-width: 70%; object-fit: contain; }
+  .page .wordmark { font-weight: 800; font-style: italic; font-size: 28pt; letter-spacing: 1px; color: #1f6fd1; line-height: 1; }
+  .page .tagline { font-size: 7pt; font-style: italic; letter-spacing: 2px; color: #1f6fd1; }
+  .page h1 { text-align: center; font-size: 10pt; font-weight: 700; margin: 14px 0 16px; }
+  .page .info { display: grid; grid-template-columns: 36% 1fr auto auto; row-gap: 2px; padding: 0 8px 6px; }
+  .page .info .bln { padding-left: 12px; }
+  .page table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .page th, .page td { border: 1px solid #000; padding: 5px 6px; vertical-align: top; word-wrap: break-word; }
+  .page table tr > :first-child { border-left: 0; }
+  .page table tr > :last-child { border-right: 0; }
+  .page table tr:last-child > * { border-bottom: 0; }
+  .page th { font-weight: 700; text-align: center; vertical-align: middle; }
+  .page td.c { text-align: center; }
+  .page td.small { font-size: 8pt; }
+  .page td.row-empty { height: 22px; }
+  .page .sig-head { font-weight: 700; text-align: center; }
+  .page .sig-cell { height: 92px; text-align: center; vertical-align: bottom; padding-bottom: 8px; }
+  .page .sig-cell img { display: block; margin: 0 auto 4px; max-height: 56px; max-width: 90%; }
+  .page .sim-title { font-weight: 700; font-size: 11pt; margin-bottom: 4px; }
+  .page .sim-sub { font-size: 8.5pt; margin-bottom: 12px; color: #333; }
+  .page .sim table th, .page .sim table td { border: 1px solid #000 !important; font-size: 8.5pt; }
+  .page .sim .num { text-align: right; white-space: nowrap; }
+  .page .sim .kv { display: grid; grid-template-columns: 52% 1fr; gap: 2px 10px; margin: 10px 0; font-size: 9pt; }
+  .page .sim ul { margin: 8px 0 0 16px; padding: 0; list-style: disc; font-size: 8pt; color: #333; }
+
+  @media print {
+    @page { size: A4; margin: 0; }
+    html, body { background: #fff !important; }
+    .no-print { display: none !important; }
+    main { display: block !important; padding: 0 !important; max-width: none !important; }
+    #previewCol { position: static !important; padding: 0 !important; }
+    #previewBox { height: auto !important; overflow: visible !important; border: 0 !important; background: none !important; padding: 0 !important; box-shadow: none !important; }
+    #sheetScaler { transform: none !important; width: auto !important; }
+    .page { margin: 0; box-shadow: none; page-break-after: always; break-after: page; }
+    .page:last-child { page-break-after: auto; break-after: auto; }
+  }
+</style>
+</head>
+<body>
+  <!-- Header aplikasi -->
+  <header class="no-print sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
+    <div class="mx-auto flex max-w-[1500px] flex-wrap items-center gap-3 px-4 py-3">
+      <div class="flex items-center gap-2">
+        <div class="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div>
+          <div class="text-sm font-semibold leading-tight">Generator Surat Perintah Lembur</div>
+          <div class="text-xs text-muted-foreground">Form SPL + tanda tangan + simulasi upah lembur (PP 35/2021)</div>
+        </div>
+      </div>
+      <div class="ml-auto flex flex-wrap items-center gap-2">
+        <button class="btn btn-ghost btn-sm" id="btnNew" title="Kosongkan semua isian">Form baru</button>
+        <button class="btn btn-outline btn-sm" id="btnExport">Simpan data (.json)</button>
+        <label class="btn btn-outline btn-sm cursor-pointer">Buka data<input type="file" id="fileImport" accept="application/json" class="hidden" /></label>
+        <button class="btn btn-primary btn-sm" id="btnPrint">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Cetak / Simpan PDF
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto grid max-w-[1500px] gap-6 px-4 py-6 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
+    <!-- ============ KOLOM FORM ============ -->
+    <section class="no-print space-y-4">
+      <div class="tabs-list" role="tablist">
+        <button class="tab-trigger" data-tab="data" data-active="true">Data</button>
+        <button class="tab-trigger" data-tab="uraian">Uraian <span id="tabCount" class="ml-1 text-xs opacity-70"></span></button>
+        <button class="tab-trigger" data-tab="ttd">Tanda Tangan</button>
+        <button class="tab-trigger" data-tab="sim">Simulasi</button>
+      </div>
+
+      <!-- TAB DATA -->
+      <div data-panel="data" class="space-y-4">
+        <div class="card p-5 space-y-4">
+          <div>
+            <h3 class="font-semibold">Data Pengajuan</h3>
+            <p class="text-sm text-muted-foreground">Identitas karyawan di bagian atas form.</p>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="col-span-2 sm:col-span-1">
+              <label class="label" for="tglPengajuan">Tanggal Pengajuan</label>
+              <input type="date" id="tglPengajuan" class="input" data-bind="tglPengajuan" />
+            </div>
+            <div class="col-span-2 sm:col-span-1">
+              <label class="label" for="bulan">Bulan</label>
+              <input id="bulan" class="input" data-bind="bulan" placeholder="Otomatis dari tanggal" />
+              <p class="hint">Kosongkan untuk mengikuti tanggal pengajuan.</p>
+            </div>
+            <div class="col-span-2">
+              <label class="label" for="nama">Nama Karyawan</label>
+              <input id="nama" class="input" data-bind="nama" placeholder="Nama lengkap" />
+            </div>
+            <div class="col-span-2">
+              <label class="label" for="jabatan">Jabatan</label>
+              <input id="jabatan" class="input" data-bind="jabatan" placeholder="Jabatan" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card p-5 space-y-4">
+          <div>
+            <h3 class="font-semibold">Kop Perusahaan</h3>
+            <p class="text-sm text-muted-foreground">Unggah logo agar kop sama persis dengan template. Tanpa logo, nama perusahaan ditampilkan sebagai teks.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div id="logoThumb" class="flex h-14 w-28 items-center justify-center overflow-hidden rounded-md border bg-muted text-xs text-muted-foreground">Belum ada</div>
+            <label class="btn btn-outline btn-sm cursor-pointer">Unggah logo<input type="file" id="logoInput" accept="image/*" class="hidden" /></label>
+            <button class="btn btn-ghost btn-sm" id="logoClear">Hapus</button>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="label">Nama perusahaan</label><input class="input" data-bind="perusahaan" /></div>
+            <div><label class="label">Tagline</label><input class="input" data-bind="tagline" /></div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="label">Jumlah baris minimum</label>
+              <input type="number" min="1" max="20" class="input" data-bind="minRows" data-type="int" />
+              <p class="hint">Baris kosong bernomor diisi sampai jumlah ini (template: 8).</p>
+            </div>
+            <div>
+              <label class="label">Lampirkan simulasi saat cetak</label>
+              <div class="flex h-9 items-center gap-2">
+                <button type="button" class="switch" id="swPrintSim" role="switch"><span class="switch-thumb"></span></button>
+                <span class="text-sm text-muted-foreground">Halaman ke-2</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB URAIAN -->
+      <div data-panel="uraian" class="hidden space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-semibold">Uraian Tugas Lembur</h3>
+            <p class="text-sm text-muted-foreground">Hari Sabtu/Minggu & libur nasional bertanggal tetap otomatis jadi "Hari Libur".</p>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btnAddRow">+ Tambah</button>
+        </div>
+        <div id="rowsList" class="space-y-3"></div>
+        <button class="btn btn-outline w-full" id="btnAddRow2">+ Tambah uraian</button>
+      </div>
+
+      <!-- TAB TANDA TANGAN -->
+      <div data-panel="ttd" class="hidden space-y-3">
+        <div>
+          <h3 class="font-semibold">Penanda Tangan</h3>
+          <p class="text-sm text-muted-foreground">Tanda tangan langsung di layar (mouse, touchpad, atau jari), atau unggah gambar tanda tangan.</p>
+        </div>
+        <div id="signerList" class="space-y-3"></div>
+      </div>
+
+      <!-- TAB SIMULASI -->
+      <div data-panel="sim" class="hidden space-y-4">
+        <div class="card p-5 space-y-4">
+          <div>
+            <h3 class="font-semibold">Dasar Upah</h3>
+            <p class="text-sm text-muted-foreground">Dipakai untuk menghitung upah sejam (1/173 × upah sebulan).</p>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="label">Jenis upah</label>
+              <select class="input" data-bind="sim.tipe">
+                <option value="bulanan">Bulanan</option>
+                <option value="harian">Harian</option>
+              </select>
+            </div>
+            <div>
+              <label class="label">Sistem waktu kerja</label>
+              <select class="input" data-bind="sim.sistem" data-type="int">
+                <option value="5">5 hari kerja (8 jam/hari)</option>
+                <option value="6">6 hari kerja (7 jam/hari)</option>
+              </select>
+            </div>
+          </div>
+          <div id="simBulanan" class="grid grid-cols-2 gap-3">
+            <div class="col-span-2 sm:col-span-1"><label class="label">Upah pokok / bulan</label><input class="input" inputmode="numeric" data-bind="sim.pokok" data-type="money" /></div>
+            <div class="col-span-2 sm:col-span-1"><label class="label">Tunjangan tetap / bulan</label><input class="input" inputmode="numeric" data-bind="sim.tetap" data-type="money" /></div>
+            <div class="col-span-2">
+              <label class="label">Tunjangan tidak tetap / bulan</label><input class="input" inputmode="numeric" data-bind="sim.tidakTetap" data-type="money" />
+              <p class="hint">Mis. uang makan/transport harian. Hanya berpengaruh bila pokok + tunjangan tetap &lt; 75% dari total upah.</p>
+            </div>
+          </div>
+          <div id="simHarian" class="hidden">
+            <label class="label">Upah per hari</label><input class="input" inputmode="numeric" data-bind="sim.harian" data-type="money" />
+            <p class="hint">Upah sebulan = upah harian × 21 (5 hari kerja) atau × 25 (6 hari kerja).</p>
+          </div>
+          <div id="simTerpendekWrap" class="hidden flex items-start gap-3 rounded-md border p-3">
+            <button type="button" class="switch mt-0.5" id="swTerpendek" role="switch"><span class="switch-thumb"></span></button>
+            <div class="text-sm">
+              <div class="font-medium">Hari libur jatuh pada hari kerja terpendek</div>
+              <div class="text-muted-foreground text-xs">Khusus 6 hari kerja: jam ke-1–5 ×2, jam ke-6 ×3, jam ke-7–9 ×4.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3" id="simStats"></div>
+        <div id="simWarnings" class="space-y-2"></div>
+
+        <div class="card overflow-hidden">
+          <div class="px-5 pt-5 pb-3"><h3 class="font-semibold">Rincian per Uraian</h3></div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="border-y bg-muted/50 text-xs text-muted-foreground">
+                <tr><th class="px-3 py-2 text-left font-medium">No</th><th class="px-3 py-2 text-left font-medium">Tanggal</th><th class="px-3 py-2 text-left font-medium">Durasi</th><th class="px-3 py-2 text-left font-medium">Pengali</th><th class="px-3 py-2 text-right font-medium">Upah</th></tr>
+              </thead>
+              <tbody id="simTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <details class="card p-5 text-sm">
+          <summary class="cursor-pointer font-semibold">Aturan yang dipakai (PP No. 35 Tahun 2021)</summary>
+          <div class="mt-3 space-y-3 text-muted-foreground">
+            <div><span class="font-medium text-foreground">Upah sejam</span> = 1/173 × upah sebulan (Pasal 32). Bila upah terdiri dari pokok + tunjangan tetap + tunjangan tidak tetap dan pokok + tunjangan tetap &lt; 75% total upah, dasar perhitungan = 75% total upah.</div>
+            <div><span class="font-medium text-foreground">Lembur hari kerja</span>: jam ke-1 ×1,5; jam berikutnya ×2 (Pasal 31 ayat 1). Maks. 4 jam/hari dan 18 jam/minggu (Pasal 26).</div>
+            <div><span class="font-medium text-foreground">Hari libur – 5 hari kerja</span>: jam ke-1–8 ×2; jam ke-9 ×3; jam ke-10–12 ×4.</div>
+            <div><span class="font-medium text-foreground">Hari libur – 6 hari kerja</span>: jam ke-1–7 ×2; jam ke-8 ×3; jam ke-9–11 ×4. Bila jatuh di hari kerja terpendek: jam ke-1–5 ×2; jam ke-6 ×3; jam ke-7–9 ×4.</div>
+            <div><span class="font-medium text-foreground">Konsumsi</span>: lembur ≥ 4 jam wajib diberi makan & minum min. 1.400 kkal, tidak bisa diganti uang (Pasal 27).</div>
+            <div>Sisa jam yang tidak genap dihitung proporsional per menit. Hasil adalah simulasi kotor (sebelum PPh 21); PKB/peraturan perusahaan yang lebih menguntungkan pekerja tetap berlaku.</div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ============ KOLOM PRATINJAU ============ -->
+    <section id="previewCol" class="lg:sticky lg:top-[76px] lg:self-start">
+      <div class="no-print mb-2 flex items-center justify-between">
+        <div class="text-sm font-medium">Pratinjau</div>
+        <div class="text-xs text-muted-foreground" id="pageInfo"></div>
+      </div>
+      <div id="previewBox" class="card overflow-hidden bg-muted/60 p-3">
+        <div id="sheetScaler" style="transform-origin: top left; width: 210mm;">
+          <div id="sheet"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Dialog tanda tangan -->
+  <dialog id="sigDialog">
+    <div class="card p-5 space-y-4">
+      <div>
+        <h3 class="font-semibold" id="sigTitle">Tanda tangan</h3>
+        <p class="text-sm text-muted-foreground">Gambar tanda tangan di dalam kotak.</p>
+      </div>
+      <div class="rounded-md border bg-white">
+        <canvas id="sigCanvas" class="block w-full" style="height:220px"></canvas>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-center gap-1 rounded-md border p-1">
+          <button class="pen-color h-6 w-6 rounded-sm border-2" data-color="#111111" style="background:#111111"></button>
+          <button class="pen-color h-6 w-6 rounded-sm border-2" data-color="#1d3fae" style="background:#1d3fae"></button>
+        </div>
+        <select id="penWidth" class="input h-8 w-auto text-xs">
+          <option value="1.6">Tipis</option><option value="2.4" selected>Sedang</option><option value="3.4">Tebal</option>
+        </select>
+        <button class="btn btn-outline btn-sm" id="sigUndo">Urungkan</button>
+        <button class="btn btn-outline btn-sm" id="sigClear">Bersihkan</button>
+        <div class="ml-auto flex gap-2">
+          <button class="btn btn-ghost btn-sm" id="sigCancel">Batal</button>
+          <button class="btn btn-primary btn-sm" id="sigSave">Simpan</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Toast -->
+  <div id="toast" class="no-print pointer-events-none fixed bottom-4 right-4 z-50 hidden rounded-lg border bg-background px-4 py-3 text-sm shadow-lg"></div>
+
+<script>
+/* =========================================================
+   Utilitas
+   ========================================================= */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const HARI = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+// Libur nasional yang tanggalnya tetap setiap tahun (libur keagamaan berbasis kalender bulan diatur manual)
+const LIBUR_TETAP = { '01-01': 'Tahun Baru Masehi', '05-01': 'Hari Buruh', '06-01': 'Hari Lahir Pancasila', '08-17': 'HUT RI', '12-25': 'Hari Natal' };
+const uid = () => Math.random().toString(36).slice(2, 9);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nl2br = (s) => esc(s).replace(/\n/g, '<br>');
+const rupiah = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Math.round(n || 0));
+const angka = (n) => new Intl.NumberFormat('id-ID').format(Math.round(n || 0));
+const desimal = (n) => new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(n);
+const parseIso = (iso) => { if (!iso) return null; const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
+const fmtTgl = (iso) => { const d = parseIso(iso); return d ? `${String(d.getDate()).padStart(2, '0')} ${BULAN[d.getMonth()]} ${d.getFullYear()}` : ''; };
+const fmtDur = (min) => { const h = Math.floor(min / 60), m = Math.round(min % 60); return m ? `${h} j ${m} m` : `${h} jam`; };
+const isoWeekKey = (iso) => { const d = parseIso(iso); const day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), 2200);
+}
+
+/* =========================================================
+   State
+   ========================================================= */
+const row = (uraian, tanggal, jenis, mulai, selesai) => ({ id: uid(), uraian, tanggal, jenis, jenisManual: false, mulai, selesai, istirahat: 0 });
+
+function contohState() {
+  return {
+    perusahaan: 'TAB SOLUTIONS', tagline: 'Technology And Business Solutions', logo: '',
+    tglPengajuan: '2026-08-18', bulan: '', nama: 'Andhika Nove Rezki', jabatan: 'Technical Leader',
+    minRows: 8, printSim: false,
+    rows: [
+      row('Tracing & Hotfix Generate Voucher Gami', '2026-07-18', 'libur', '14:00', '17:00'),
+      row('Strest Test Sistem Lifestyle untuk kesiapan Penjualan Tiket PLN Electric Run 2026', '2026-07-22', 'kerja', '19:00', '23:00'),
+      row('Development Penyesuan After UAT, Deployment Production & Test Operational Penjualan Bundling dan Early Bird PLN Electric Run 2026', '2026-07-25', 'libur', '08:00', '17:00'),
+      row('Development Penyesuan After UAT, Deployment Production & Test Operational Penjualan Bundling dan Early Bird PLN Electric Run 2026', '2026-07-26', 'libur', '09:00', '17:00'),
+      row('Penyesuaian Sistem Antrian ke dalam Redis Cluster dan Improvement SSE', '2026-08-02', 'libur', '09:00', '19:00'),
+      row('Functional Testing dan Tes Operasional dengan Kompas untuk Penjualan General Admission PLN Electric Run 2026', '2026-08-09', 'libur', '13:00', '22:00'),
+      row('Functional Testing dan Tes Operasional untuk Penjualan PLN Electric Series 5K', '2026-08-17', 'libur', '13:00', '18:00'),
+    ],
+    ttd: {
+      pengaju:  { role: '',         nama: 'Andhika Nove Rezki', img: '' },
+      customer: { role: 'Customer', nama: 'Rizky Amalia Cahya Eka Putri', img: '' },
+      leader:   { role: 'Leader',   nama: 'A.Arifiantono', img: '' },
+      hrd:      { role: 'HRD',      nama: 'Indah Puji Astuti', img: '' },
+    },
+    sim: { tipe: 'bulanan', sistem: 5, terpendek: false, pokok: 8000000, tetap: 0, tidakTetap: 0, harian: 0 },
+  };
+}
+
+function kosongState() {
+  const s = contohState();
+  const today = new Date(); const iso = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  return { ...s, tglPengajuan: iso, nama: '', jabatan: '', rows: [row('', '', 'kerja', '', '')],
+    ttd: { pengaju: { role: '', nama: '', img: '' }, customer: { role: 'Customer', nama: '', img: '' }, leader: { role: 'Leader', nama: '', img: '' }, hrd: { role: 'HRD', nama: '', img: '' } },
+    perusahaan: s.perusahaan, tagline: s.tagline, logo: state?.logo || '', sim: state?.sim || s.sim };
+}
+
+const STORE_KEY = 'spl-generator-v1';
+let state;
+try { state = JSON.parse(localStorage.getItem(STORE_KEY)) || contohState(); } catch { state = contohState(); }
+function persist() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch { /* storage penuh / diblokir */ } }
+
+const getPath = (p) => p.split('.').reduce((o, k) => o?.[k], state);
+const setPath = (p, v) => { const ks = p.split('.'); const last = ks.pop(); ks.reduce((o, k) => o[k], state)[last] = v; };
+
+/* =========================================================
+   Logika jenis hari & perhitungan lembur (PP 35/2021)
+   ========================================================= */
+function deteksiJenis(iso) {
+  const d = parseIso(iso); if (!d) return null;
+  const mmdd = iso.slice(5);
+  if (LIBUR_TETAP[mmdd]) return { jenis: 'libur', ket: LIBUR_TETAP[mmdd] };
+  const day = d.getDay();
+  if (day === 0 || (state.sim.sistem === 5 && day === 6)) return { jenis: 'libur', ket: HARI[day] };
+  return { jenis: 'kerja', ket: HARI[day] };
+}
+
+function durasiMenit(r) {
+  if (!r.mulai || !r.selesai) return 0;
+  const [h1, m1] = r.mulai.split(':').map(Number), [h2, m2] = r.selesai.split(':').map(Number);
+  let a = h1 * 60 + m1, b = h2 * 60 + m2;
+  if (b <= a) b += 1440; // melewati tengah malam
+  return Math.max(0, b - a - (Number(r.istirahat) || 0));
+}
+
+function pengali(jenis, n) {
+  const { sistem, terpendek } = state.sim;
+  if (jenis === 'kerja') return n === 1 ? 1.5 : 2;
+  if (sistem === 5) return n <= 8 ? 2 : n === 9 ? 3 : 4;
+  if (terpendek) return n <= 5 ? 2 : n === 6 ? 3 : 4;
+  return n <= 7 ? 2 : n === 8 ? 3 : 4;
+}
+const batasJamLibur = () => state.sim.sistem === 5 ? 12 : state.sim.terpendek ? 9 : 11;
+
+function dasarUpah() {
+  const s = state.sim;
+  if (s.tipe === 'harian') {
+    const sebulan = (s.harian || 0) * (s.sistem === 5 ? 21 : 25);
+    return { sebulan, dasar: sebulan, catatan: `Upah harian × ${s.sistem === 5 ? 21 : 25}` };
+  }
+  const tetap = (s.pokok || 0) + (s.tetap || 0), total = tetap + (s.tidakTetap || 0);
+  if (s.tidakTetap > 0 && tetap < 0.75 * total) return { sebulan: total, dasar: 0.75 * total, catatan: '75% dari total upah (pokok + tunj. tetap < 75%)' };
+  return { sebulan: total, dasar: tetap, catatan: 'Upah pokok + tunjangan tetap' };
+}
+
+function hitungBaris(r, upahJam) {
+  const menit = durasiMenit(r);
+  let sisa = menit / 60, n = 0, jamTerhitung = 0; const grup = {};
+  while (sisa > 1e-9) {
+    n++; const porsi = Math.min(1, sisa); const k = pengali(r.jenis, n);
+    jamTerhitung += porsi * k; grup[k] = (grup[k] || 0) + porsi; sisa -= porsi;
+  }
+  const rincian = Object.entries(grup).sort((a, b) => a[0] - b[0]).map(([k, j]) => `${desimal(j)}j × ${desimal(Number(k))}`).join(' + ');
+  return { menit, jam: menit / 60, jamTerhitung, rincian: rincian || '–', upah: jamTerhitung * upahJam };
+}
+
+function hitungSemua() {
+  const d = dasarUpah(); const upahJam = d.dasar / 173;
+  const baris = state.rows.map((r, i) => ({ r, i, ...hitungBaris(r, upahJam) }));
+  const total = baris.reduce((a, b) => ({ jam: a.jam + b.jam, terhitung: a.terhitung + b.jamTerhitung, upah: a.upah + b.upah }), { jam: 0, terhitung: 0, upah: 0 });
+
+  const peringatan = [];
+  baris.forEach(b => {
+    if (!b.menit) return;
+    const lbl = `No. ${b.i + 1} (${fmtTgl(b.r.tanggal) || 'tanpa tanggal'})`;
+    if (b.r.jenis === 'kerja' && b.jam > 4) peringatan.push({ t: 'warn', m: `${lbl}: lembur hari kerja ${desimal(b.jam)} jam, melebihi batas 4 jam/hari (Pasal 26 PP 35/2021).` });
+    if (b.r.jenis === 'libur' && b.jam > batasJamLibur()) peringatan.push({ t: 'warn', m: `${lbl}: ${desimal(b.jam)} jam di hari libur melewati jam ke-${batasJamLibur()} pada skema tarif; kelebihan dihitung ×4.` });
+  });
+  const perMinggu = {};
+  baris.filter(b => b.r.jenis === 'kerja' && b.r.tanggal && b.menit).forEach(b => { const k = isoWeekKey(b.r.tanggal); perMinggu[k] = (perMinggu[k] || 0) + b.jam; });
+  Object.entries(perMinggu).forEach(([k, j]) => { if (j > 18) peringatan.push({ t: 'warn', m: `Minggu mulai ${fmtTgl(k)}: total lembur hari kerja ${desimal(j)} jam, melebihi batas 18 jam/minggu.` }); });
+  const makan = baris.filter(b => b.jam >= 4).length;
+  if (makan) peringatan.push({ t: 'info', m: `${makan} uraian berdurasi ≥ 4 jam: perusahaan wajib menyediakan makan & minum min. 1.400 kkal (tidak dapat diganti uang).` });
+  if (!d.dasar) peringatan.push({ t: 'info', m: 'Isi upah di tab Simulasi untuk melihat estimasi upah lembur.' });
+  return { d, upahJam, baris, total, peringatan };
+}
+
+/* =========================================================
+   Render: lembar SPL (pratinjau & cetak)
+   ========================================================= */
+function bulanText() {
+  if (state.bulan?.trim()) return state.bulan.trim();
+  const d = parseIso(state.tglPengajuan); return d ? BULAN[d.getMonth()] : '';
+}
+
+function kopHtml() {
+  return `<div class="logo">${state.logo
+    ? `<img src="${state.logo}" alt="logo">`
+    : `<div class="wordmark">${esc(state.perusahaan)}</div>${state.tagline ? `<div class="tagline">${esc(state.tagline)}</div>` : ''}`}</div>`;
+}
+
+function sigCell(key, colspan = 1) {
+  const s = state.ttd[key];
+  return `<td class="sig-cell" colspan="${colspan}">${s.img ? `<img src="${s.img}" alt="ttd">` : ''}${nl2br(s.nama)}</td>`;
+}
+
+function halamanSPL() {
+  const rows = state.rows; const total = Math.max(rows.length, state.minRows || 0);
+  let body = '';
+  for (let i = 0; i < total; i++) {
+    const r = rows[i];
+    body += r
+      ? `<tr><td class="small">${i + 1}</td><td>${nl2br(r.uraian)}</td><td class="c">${fmtTgl(r.tanggal)}</td><td class="small">${r.jenis === 'libur' ? 'Hari Libur' : 'Hari Kerja'}</td><td class="c">${esc(r.mulai)}</td><td class="c">${esc(r.selesai)}</td></tr>`
+      : `<tr><td class="small row-empty">${i + 1}</td><td></td><td></td><td></td><td></td><td></td></tr>`;
+  }
+  const t = state.ttd;
+  return `<div class="page"><div class="frame">
+    ${kopHtml()}
+    <h1>SURAT PERINTAH LEMBUR</h1>
+    <div class="info">
+      <div>Tanggal Pengajuan</div><div>: ${fmtTgl(state.tglPengajuan)}</div><div>Bulan :</div><div class="bln">${esc(bulanText())}</div>
+      <div>Nama Karyawan</div><div>: ${esc(state.nama)}</div><div></div><div></div>
+      <div>Jabatan</div><div>: ${esc(state.jabatan)}</div><div></div><div></div>
+    </div>
+    <table>
+      <colgroup><col style="width:5.5%"><col style="width:39%"><col style="width:20%"><col style="width:11.5%"><col style="width:12%"><col style="width:12%"></colgroup>
+      <thead>
+        <tr><th rowspan="2" style="text-align:left">NO</th><th rowspan="2">Uraian Tugas</th><th rowspan="2">Tanggal Lembur</th><th rowspan="2">Hari Kerja/Hari Libur</th><th colspan="2">Jam lembur</th></tr>
+        <tr><th>Mulai</th><th>Berakhir</th></tr>
+      </thead>
+      <tbody>
+        ${body}
+        <tr><td colspan="2" rowspan="2" class="sig-head" style="vertical-align:top">Diajukan oleh :</td><td class="sig-head">Diketahui oleh :</td><td colspan="3" class="sig-head">Disetujui oleh :</td></tr>
+        <tr><td class="sig-head">${esc(t.customer.role)}</td><td colspan="2" class="sig-head">${esc(t.leader.role)}</td><td class="sig-head">${esc(t.hrd.role)}</td></tr>
+        <tr>${sigCell('pengaju', 2)}${sigCell('customer')}${sigCell('leader', 2)}${sigCell('hrd')}</tr>
+      </tbody>
+    </table>
+  </div></div>`;
+}
+
+function halamanSimulasi(h) {
+  const s = state.sim;
+  const rows = h.baris.map(b => `<tr><td>${b.i + 1}</td><td>${fmtTgl(b.r.tanggal)}</td><td>${b.r.jenis === 'libur' ? 'Libur' : 'Kerja'}</td><td class="num">${b.menit ? fmtDur(b.menit) : '–'}</td><td>${b.rincian}</td><td class="num">${desimal(b.jamTerhitung)}</td><td class="num">${angka(b.upah)}</td></tr>`).join('');
+  return `<div class="page"><div class="sim">
+    <div class="sim-title">Lampiran – Simulasi Upah Lembur</div>
+    <div class="sim-sub">${esc(state.nama)} · ${esc(state.jabatan)} · Periode ${esc(bulanText())} · Dasar: PP No. 35 Tahun 2021</div>
+    <div class="kv">
+      <div>Sistem waktu kerja</div><div>${s.sistem} hari kerja / minggu</div>
+      <div>Upah sebulan</div><div>${rupiah(h.d.sebulan)}</div>
+      <div>Dasar perhitungan</div><div>${rupiah(h.d.dasar)} <span style="color:#555">(${esc(h.d.catatan)})</span></div>
+      <div>Upah sejam (1/173 × dasar)</div><div>${rupiah(h.upahJam)}</div>
+    </div>
+    <table>
+      <colgroup><col style="width:6%"><col style="width:19%"><col style="width:9%"><col style="width:12%"><col style="width:26%"><col style="width:12%"><col style="width:16%"></colgroup>
+      <thead><tr><th>No</th><th>Tanggal</th><th>Hari</th><th>Durasi</th><th>Rincian pengali</th><th>Jam terhitung</th><th>Upah (Rp)</th></tr></thead>
+      <tbody>${rows}
+        <tr><td colspan="3" style="font-weight:700">Total</td><td class="num" style="font-weight:700">${fmtDur(h.total.jam * 60)}</td><td></td><td class="num" style="font-weight:700">${desimal(h.total.terhitung)}</td><td class="num" style="font-weight:700">${angka(h.total.upah)}</td></tr>
+      </tbody>
+    </table>
+    <ul>
+      <li>Hari kerja: jam ke-1 ×1,5, jam berikutnya ×2 (maks. 4 jam/hari, 18 jam/minggu).</li>
+      <li>Hari libur ${s.sistem === 5 ? '(5 hari kerja): jam ke-1–8 ×2, jam ke-9 ×3, jam ke-10–12 ×4' : s.terpendek ? '(6 hari kerja, hari kerja terpendek): jam ke-1–5 ×2, jam ke-6 ×3, jam ke-7–9 ×4' : '(6 hari kerja): jam ke-1–7 ×2, jam ke-8 ×3, jam ke-9–11 ×4'}.</li>
+      <li>Angka di atas adalah simulasi bruto sebelum PPh 21.</li>
+    </ul>
+  </div></div>`;
+}
+
+/* =========================================================
+   Render: panel simulasi
+   ========================================================= */
+function renderSim(h) {
+  const stat = (label, val, sub = '') => `<div class="card p-4"><div class="text-xs text-muted-foreground">${label}</div><div class="mt-1 text-lg font-semibold tracking-tight">${val}</div>${sub ? `<div class="text-xs text-muted-foreground mt-0.5">${sub}</div>` : ''}</div>`;
+  $('#simStats').innerHTML =
+    stat('Upah sejam', rupiah(h.upahJam), esc(h.d.catatan)) +
+    stat('Total jam lembur', fmtDur(h.total.jam * 60), `${h.baris.filter(b => b.menit).length} uraian`) +
+    stat('Jam terhitung (× pengali)', desimal(h.total.terhitung), 'Jam setelah dikali pengali') +
+    `<div class="card p-4 bg-primary text-primary-foreground"><div class="text-xs opacity-80">Estimasi upah lembur</div><div class="mt-1 text-lg font-semibold tracking-tight">${rupiah(h.total.upah)}</div><div class="text-xs opacity-80 mt-0.5">Bruto, sebelum pajak</div></div>`;
+  $('#simWarnings').innerHTML = h.peringatan.map(p => `<div class="alert ${p.t === 'warn' ? 'alert-warn' : 'alert-info'}">${esc(p.m)}</div>`).join('');
+  $('#simTable').innerHTML = h.baris.map(b => `<tr class="border-b last:border-0">
+      <td class="px-3 py-2">${b.i + 1}</td>
+      <td class="px-3 py-2 whitespace-nowrap">${fmtTgl(b.r.tanggal) || '–'}<div class="text-xs text-muted-foreground">${b.r.jenis === 'libur' ? 'Hari Libur' : 'Hari Kerja'}</div></td>
+      <td class="px-3 py-2 whitespace-nowrap">${b.menit ? fmtDur(b.menit) : '–'}</td>
+      <td class="px-3 py-2 text-xs">${b.rincian}</td>
+      <td class="px-3 py-2 text-right whitespace-nowrap font-medium">${rupiah(b.upah)}</td></tr>`).join('') ||
+    '<tr><td colspan="5" class="px-3 py-6 text-center text-muted-foreground">Belum ada uraian.</td></tr>';
+}
+
+/* =========================================================
+   Render: daftar uraian (form)
+   ========================================================= */
+const ICON = {
+  up: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 15-6-6-6 6"/></svg>',
+  down: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>',
+  copy: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+};
+
+function renderRows() {
+  $('#rowsList').innerHTML = state.rows.map((r, i) => `
+    <div class="card p-4 space-y-3" data-id="${r.id}">
+      <div class="flex items-center gap-2">
+        <span class="badge badge-secondary">No. ${i + 1}</span>
+        <span class="text-xs text-muted-foreground" data-info></span>
+        <div class="ml-auto flex gap-1">
+          <button class="btn btn-ghost btn-icon" data-act="up" title="Naikkan" ${i === 0 ? 'disabled' : ''}>${ICON.up}</button>
+          <button class="btn btn-ghost btn-icon" data-act="down" title="Turunkan" ${i === state.rows.length - 1 ? 'disabled' : ''}>${ICON.down}</button>
+          <button class="btn btn-ghost btn-icon" data-act="dup" title="Duplikat">${ICON.copy}</button>
+          <button class="btn btn-ghost btn-icon text-destructive" data-act="del" title="Hapus">${ICON.trash}</button>
+        </div>
+      </div>
+      <div>
+        <label class="label">Uraian tugas</label>
+        <textarea class="textarea" rows="2" data-f="uraian" placeholder="Contoh: Deployment production & monitoring">${esc(r.uraian)}</textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="label">Tanggal lembur</label><input type="date" class="input" data-f="tanggal" value="${esc(r.tanggal)}"></div>
+        <div><label class="label">Jenis hari</label>
+          <select class="input" data-f="jenis"><option value="kerja" ${r.jenis === 'kerja' ? 'selected' : ''}>Hari Kerja</option><option value="libur" ${r.jenis === 'libur' ? 'selected' : ''}>Hari Libur</option></select>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div><label class="label">Mulai</label><input type="time" class="input" data-f="mulai" value="${esc(r.mulai)}"></div>
+        <div><label class="label">Berakhir</label><input type="time" class="input" data-f="selesai" value="${esc(r.selesai)}"></div>
+        <div><label class="label">Istirahat (mnt)</label><input type="number" min="0" step="15" class="input" data-f="istirahat" value="${r.istirahat || 0}"></div>
+      </div>
+    </div>`).join('');
+  $('#tabCount').textContent = `(${state.rows.length})`;
+  updateRowInfo();
+}
+
+function updateRowInfo() {
+  const h = hitungSemua();
+  h.baris.forEach(b => {
+    const el = $(`[data-id="${b.r.id}"] [data-info]`); if (!el) return;
+    const det = b.r.tanggal ? deteksiJenis(b.r.tanggal) : null;
+    const parts = [];
+    if (det) parts.push(det.ket);
+    if (b.menit) parts.push(fmtDur(b.menit));
+    if (b.menit && h.upahJam) parts.push(rupiah(b.upah));
+    let html = esc(parts.join(' · '));
+    if (b.r.jenis === 'kerja' && b.jam > 4) html += ' <span class="badge border-amber-300 bg-amber-50 text-amber-900">> 4 jam</span>';
+    el.innerHTML = html;
+  });
+}
+
+/* =========================================================
+   Render: penanda tangan
+   ========================================================= */
+const SIGNERS = [
+  { key: 'pengaju', grup: 'Diajukan oleh' },
+  { key: 'customer', grup: 'Diketahui oleh' },
+  { key: 'leader', grup: 'Disetujui oleh' },
+  { key: 'hrd', grup: 'Disetujui oleh' },
+];
+function renderSigners() {
+  $('#signerList').innerHTML = SIGNERS.map(({ key, grup }) => {
+    const s = state.ttd[key];
+    return `<div class="card p-4" data-signer="${key}">
+      <div class="flex items-start gap-4">
+        <div class="flex h-20 w-36 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-white">
+          ${s.img ? `<img src="${s.img}" class="max-h-full max-w-full">` : '<span class="text-xs text-muted-foreground">Belum ditandatangani</span>'}
+        </div>
+        <div class="flex-1 space-y-2">
+          <div class="text-xs font-medium text-muted-foreground uppercase tracking-wide">${grup}</div>
+          <div class="grid grid-cols-2 gap-2">
+            ${key === 'pengaju' ? '' : `<input class="input" data-s="role" value="${esc(s.role)}" placeholder="Peran (mis. Leader)">`}
+            <input class="input ${key === 'pengaju' ? 'col-span-2' : ''}" data-s="nama" value="${esc(s.nama)}" placeholder="Nama">
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button class="btn btn-primary btn-sm" data-sig="draw">${s.img ? 'Ulangi tanda tangan' : 'Tanda tangan'}</button>
+            <label class="btn btn-outline btn-sm cursor-pointer">Unggah gambar<input type="file" accept="image/*" class="hidden" data-sig="upload"></label>
+            ${s.img ? '<button class="btn btn-ghost btn-sm text-destructive" data-sig="clear">Hapus</button>' : ''}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* =========================================================
+   Render utama
+   ========================================================= */
+function renderPreview() {
+  const h = hitungSemua();
+  $('#sheet').innerHTML = halamanSPL() + (state.printSim ? halamanSimulasi(h) : '');
+  renderSim(h);
+  $('#pageInfo').textContent = `A4 · ${state.printSim ? '2 halaman' : '1 halaman'}`;
+  fitPreview();
+}
+function update() { persist(); renderPreview(); updateRowInfo(); }
+
+function fitPreview() {
+  const box = $('#previewBox'), scaler = $('#sheetScaler');
+  const avail = box.clientWidth - 24; const pageW = scaler.offsetWidth;
+  const scale = Math.min(1, avail / pageW);
+  scaler.style.transform = `scale(${scale})`;
+  box.style.height = (scaler.offsetHeight * scale + 24) + 'px';
+}
+new ResizeObserver(fitPreview).observe($('#previewBox'));
+
+function syncStaticInputs() {
+  $$('[data-bind]').forEach(el => {
+    const v = getPath(el.dataset.bind);
+    el.value = el.dataset.type === 'money' ? (v ? angka(v) : '') : (v ?? '');
+  });
+  $('#swPrintSim').dataset.on = state.printSim;
+  $('#swTerpendek').dataset.on = state.sim.terpendek;
+  $('#simBulanan').classList.toggle('hidden', state.sim.tipe !== 'bulanan');
+  $('#simHarian').classList.toggle('hidden', state.sim.tipe !== 'harian');
+  $('#simTerpendekWrap').classList.toggle('hidden', state.sim.sistem !== 6);
+  $('#simTerpendekWrap').classList.toggle('flex', state.sim.sistem === 6);
+  $('#logoThumb').innerHTML = state.logo ? `<img src="${state.logo}" class="max-h-full max-w-full object-contain">` : 'Belum ada';
+}
+function renderAll() { syncStaticInputs(); renderRows(); renderSigners(); renderPreview(); }
+
+/* =========================================================
+   Event: input statis
+   ========================================================= */
+$$('[data-bind]').forEach(el => {
+  el.addEventListener('input', () => {
+    let v = el.value;
+    if (el.dataset.type === 'int') v = parseInt(v, 10) || 0;
+    if (el.dataset.type === 'money') {
+      const n = parseInt(v.replace(/\D/g, ''), 10) || 0; v = n;
+      const pos = el.value.length - el.selectionStart; el.value = n ? angka(n) : '';
+      el.setSelectionRange(Math.max(0, el.value.length - pos), Math.max(0, el.value.length - pos));
+    }
+    setPath(el.dataset.bind, v);
+    if (el.dataset.bind === 'sim.sistem' || el.dataset.bind === 'sim.tipe') {
+      // sistem kerja memengaruhi deteksi Sabtu → perbarui jenis hari yang belum diubah manual
+      state.rows.forEach(r => { if (!r.jenisManual && r.tanggal) r.jenis = deteksiJenis(r.tanggal).jenis; });
+      syncStaticInputs(); renderRows();
+    }
+    update();
+  });
+});
+
+$('#swPrintSim').addEventListener('click', () => { state.printSim = !state.printSim; syncStaticInputs(); update(); });
+$('#swTerpendek').addEventListener('click', () => { state.sim.terpendek = !state.sim.terpendek; syncStaticInputs(); update(); });
+
+// Tabs
+$$('.tab-trigger').forEach(b => b.addEventListener('click', () => {
+  $$('.tab-trigger').forEach(x => x.dataset.active = x === b);
+  $$('[data-panel]').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== b.dataset.tab));
+}));
+
+// Logo
+const readFile = (file) => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file); });
+async function downscale(dataUrl, maxW = 900) {
+  const img = new Image(); img.src = dataUrl; await img.decode();
+  if (img.width <= maxW) return dataUrl;
+  const c = document.createElement('canvas'); c.width = maxW; c.height = Math.round(img.height * maxW / img.width);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); return c.toDataURL('image/png');
+}
+$('#logoInput').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  state.logo = await downscale(await readFile(f)); e.target.value = ''; syncStaticInputs(); update();
+});
+$('#logoClear').addEventListener('click', () => { state.logo = ''; syncStaticInputs(); update(); });
+
+/* =========================================================
+   Event: uraian
+   ========================================================= */
+function addRow() {
+  const last = state.rows[state.rows.length - 1];
+  state.rows.push(row('', '', 'kerja', last?.mulai || '', last?.selesai || ''));
+  renderRows(); update();
+  const cards = $$('#rowsList [data-id]'); const lastCard = cards[cards.length - 1];
+  lastCard?.scrollIntoView({ behavior: 'smooth', block: 'center' }); $('textarea', lastCard)?.focus();
+}
+$('#btnAddRow').addEventListener('click', addRow);
+$('#btnAddRow2').addEventListener('click', addRow);
+
+$('#rowsList').addEventListener('input', (e) => {
+  const card = e.target.closest('[data-id]'); const f = e.target.dataset.f; if (!card || !f) return;
+  const r = state.rows.find(x => x.id === card.dataset.id);
+  r[f] = f === 'istirahat' ? (parseInt(e.target.value, 10) || 0) : e.target.value;
+  if (f === 'jenis') r.jenisManual = true;
+  if (f === 'tanggal' && r.tanggal) {
+    r.jenisManual = false; r.jenis = deteksiJenis(r.tanggal).jenis;
+    $('[data-f="jenis"]', card).value = r.jenis;
+  }
+  update();
+});
+$('#rowsList').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-act]'); if (!btn) return;
+  const id = btn.closest('[data-id]').dataset.id; const i = state.rows.findIndex(x => x.id === id);
+  const act = btn.dataset.act;
+  if (act === 'up' && i > 0) [state.rows[i - 1], state.rows[i]] = [state.rows[i], state.rows[i - 1]];
+  if (act === 'down' && i < state.rows.length - 1) [state.rows[i + 1], state.rows[i]] = [state.rows[i], state.rows[i + 1]];
+  if (act === 'dup') state.rows.splice(i + 1, 0, { ...state.rows[i], id: uid() });
+  if (act === 'del') { state.rows.splice(i, 1); toast('Uraian dihapus'); }
+  renderRows(); update();
+});
+
+/* =========================================================
+   Tanda tangan (canvas, mendukung mouse/pen/sentuh)
+   ========================================================= */
+const Pad = {
+  canvas: $('#sigCanvas'), strokes: [], cur: null, color: '#111111', width: 2.4,
+  init() {
+    const c = this.canvas;
+    c.addEventListener('pointerdown', (e) => { c.setPointerCapture(e.pointerId); this.cur = { color: this.color, width: this.width, pts: [this.pt(e)] }; this.strokes.push(this.cur); this.redraw(); });
+    c.addEventListener('pointermove', (e) => { if (!this.cur) return; const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; evs.forEach(ev => this.cur.pts.push(this.pt(ev))); this.redraw(); });
+    const end = () => { this.cur = null; };
+    c.addEventListener('pointerup', end); c.addEventListener('pointercancel', end);
+  },
+  pt(e) { const r = this.canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top, p: e.pressure || 0.5 }; },
+  resize() {
+    const c = this.canvas, dpr = window.devicePixelRatio || 1, r = c.getBoundingClientRect();
+    c.width = r.width * dpr; c.height = r.height * dpr; this.ctx = c.getContext('2d'); this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); this.redraw();
+  },
+  drawStroke(ctx, s) {
+    const p = s.pts; ctx.strokeStyle = s.color; ctx.fillStyle = s.color; ctx.lineWidth = s.width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (p.length === 1) { ctx.beginPath(); ctx.arc(p[0].x, p[0].y, s.width / 2, 0, Math.PI * 2); ctx.fill(); return; }
+    ctx.beginPath(); ctx.moveTo(p[0].x, p[0].y);
+    for (let i = 1; i < p.length - 1; i++) { const mx = (p[i].x + p[i + 1].x) / 2, my = (p[i].y + p[i + 1].y) / 2; ctx.quadraticCurveTo(p[i].x, p[i].y, mx, my); }
+    ctx.lineTo(p[p.length - 1].x, p[p.length - 1].y); ctx.stroke();
+  },
+  redraw() {
+    const ctx = this.ctx, c = this.canvas; if (!ctx) return;
+    ctx.clearRect(0, 0, c.width, c.height);
+    // garis bantu
+    const r = c.getBoundingClientRect(); ctx.save(); ctx.strokeStyle = '#e4e4e7'; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(24, r.height - 40); ctx.lineTo(r.width - 24, r.height - 40); ctx.stroke(); ctx.restore();
+    this.strokes.forEach(s => this.drawStroke(ctx, s));
+  },
+  clear() { this.strokes = []; this.redraw(); },
+  undo() { this.strokes.pop(); this.redraw(); },
+  isEmpty() { return !this.strokes.length; },
+  export() {
+    // potong otomatis sesuai area coretan, latar transparan
+    const all = this.strokes.flatMap(s => s.pts); const pad = 8, scale = 2;
+    const minX = Math.min(...all.map(p => p.x)) - pad, minY = Math.min(...all.map(p => p.y)) - pad;
+    const maxX = Math.max(...all.map(p => p.x)) + pad, maxY = Math.max(...all.map(p => p.y)) + pad;
+    const out = document.createElement('canvas'); out.width = (maxX - minX) * scale; out.height = (maxY - minY) * scale;
+    const ctx = out.getContext('2d'); ctx.setTransform(scale, 0, 0, scale, -minX * scale, -minY * scale);
+    this.strokes.forEach(s => this.drawStroke(ctx, s));
+    return out.toDataURL('image/png');
+  },
+};
+Pad.init();
+
+let sigTarget = null;
+function openSig(key) {
+  sigTarget = key; const s = state.ttd[key];
+  $('#sigTitle').textContent = `Tanda tangan – ${s.nama || (key === 'pengaju' ? 'Pengaju' : s.role)}`;
+  $('#sigDialog').showModal(); Pad.clear(); requestAnimationFrame(() => Pad.resize());
+}
+$$('.pen-color').forEach(b => b.addEventListener('click', () => { Pad.color = b.dataset.color; $$('.pen-color').forEach(x => x.style.borderColor = x === b ? '#a1a1aa' : 'transparent'); }));
+$$('.pen-color')[0].click();
+$('#penWidth').addEventListener('change', (e) => Pad.width = parseFloat(e.target.value));
+$('#sigUndo').addEventListener('click', () => Pad.undo());
+$('#sigClear').addEventListener('click', () => Pad.clear());
+$('#sigCancel').addEventListener('click', () => $('#sigDialog').close());
+$('#sigSave').addEventListener('click', () => {
+  if (Pad.isEmpty()) { toast('Kotak tanda tangan masih kosong'); return; }
+  state.ttd[sigTarget].img = Pad.export(); $('#sigDialog').close(); renderSigners(); update(); toast('Tanda tangan disimpan');
+});
+window.addEventListener('resize', () => { if ($('#sigDialog').open) Pad.resize(); });
+
+$('#signerList').addEventListener('input', (e) => {
+  const key = e.target.closest('[data-signer]')?.dataset.signer; const f = e.target.dataset.s; if (!key || !f) return;
+  state.ttd[key][f] = e.target.value; update();
+});
+$('#signerList').addEventListener('click', (e) => {
+  const key = e.target.closest('[data-signer]')?.dataset.signer; const act = e.target.closest('[data-sig]')?.dataset.sig;
+  if (!key || !act) return;
+  if (act === 'draw') openSig(key);
+  if (act === 'clear') { state.ttd[key].img = ''; renderSigners(); update(); }
+});
+$('#signerList').addEventListener('change', async (e) => {
+  if (e.target.dataset.sig !== 'upload') return;
+  const key = e.target.closest('[data-signer]').dataset.signer; const f = e.target.files[0]; if (!f) return;
+  state.ttd[key].img = await downscale(await readFile(f), 600); renderSigners(); update(); toast('Gambar tanda tangan dipasang');
+});
+
+/* =========================================================
+   Aksi header: cetak, simpan, buka, baru
+   ========================================================= */
+$('#btnPrint').addEventListener('click', () => {
+  const old = document.title;
+  document.title = `SPL - ${state.nama || 'Karyawan'} - ${fmtTgl(state.tglPengajuan)}`; // jadi nama file PDF
+  try { window.print(); } catch { toast('Cetak tidak diizinkan di tampilan ini. Buka file di browser.'); }
+  setTimeout(() => document.title = old, 500);
+});
+$('#btnExport').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `SPL - ${state.nama || 'Karyawan'} - ${fmtTgl(state.tglPengajuan)}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+$('#fileImport').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text()); const base = contohState();
+    state = { ...base, ...data, ttd: { ...base.ttd, ...data.ttd }, sim: { ...base.sim, ...data.sim } };
+    renderAll(); persist(); toast('Data berhasil dimuat');
+  } catch { toast('File tidak valid'); }
+  e.target.value = '';
+});
+$('#btnNew').addEventListener('click', () => {
+  if ($('#btnNew').dataset.confirm !== '1') { $('#btnNew').dataset.confirm = '1'; $('#btnNew').textContent = 'Klik lagi untuk kosongkan'; setTimeout(() => { $('#btnNew').dataset.confirm = ''; $('#btnNew').textContent = 'Form baru'; }, 2500); return; }
+  $('#btnNew').dataset.confirm = ''; $('#btnNew').textContent = 'Form baru';
+  state = kosongState(); renderAll(); persist(); toast('Form dikosongkan (logo & data upah dipertahankan)');
+});
+
+renderAll();
+</script>
+</body>
+</html>
